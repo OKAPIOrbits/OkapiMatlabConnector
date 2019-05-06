@@ -55,10 +55,19 @@ if (web_response.StatusCode == 404)
     error.status = 'FATAL';
     return;
 end
-    
 
 % get the result as char (needed for conversion to json
-result = jsondecode(convertStringsToChars(web_response.Body.Data));
+if (~isempty(web_response.Body.Data))
+    result = jsondecode(convertStringsToChars(web_response.Body.Data));
+end
+
+% check for 202
+if (web_response.StatusCode == 202)
+    error.web_status = web_response.StatusCode;
+    error.message = 'Result might not be complete.';
+    error.status = 'WARNING';            
+    return;
+end
     
 % for simplicity, write the values to error
 error.message = 'No messages available';
@@ -74,10 +83,17 @@ for (i = 1:length(result))
             error.status = result(i).state_msg.type;
         end
     elseif (isfield(result(i),'state_msgs'))
-        for (j = 1:length(result(i).stateMsgs))
+        for (j = 1:length(result(i).state_msgs))
             if (~strcmp(error.status,'FATAL')) && (~strcmp(result(i).state_msgs(j).type,'NONE'))
                 error.message = result(i).state_msgs(j).text;
                 error.status = result(i).state_msgs(j).type;
+            end
+        end    
+    elseif (isfield(result{i,1},'state_msgs'))
+        for (j = 1:length(result{i,1}.state_msgs))
+            if (~strcmp(error.status,'FATAL')) && (~strcmp(result{i,1}.state_msgs(j).type,'NONE'))
+                error.message = result{i,1}.state_msgs(j).text;
+                error.status = result{i,1}.state_msgs(j).type;
             end
         end
     else
@@ -85,6 +101,4 @@ for (i = 1:length(result))
     end
 end
 
-error.web_status = web_response.StatusCode;
-                       
-
+error.web_status = web_response.StatusCode;                      

@@ -5,7 +5,7 @@ clc; close all; clear all;
 addpath ../src/
 
 %% First: Log-in to picard
-[PicardLogin, OkapiError] = OkapiInit('http://localhost:34568/',user_name_as_string,password_as_string);
+[PicardLogin, OkapiError] = OkapiInit(<url_to_server_as_string>,<user_name_as_string>,<password_as_string>);
 if (OkapiError.status == "FATAL")
     % do something about fatal errors
     error(OkapiError.message);
@@ -19,7 +19,7 @@ end
 
 % Alternative: Set it up yourself
 groundLocation = struct('longitude',10.645,'latitude',52.3283,'altitude',0.048);
-timeWindow = struct('start','2018-08-07T18:00:00.000Z','end','2018-08-08T00:00:00.000Z');
+timeWindow = struct('start','2018-08-07T18:00:00.000Z','end','2018-08-07T20:00:00.000Z');
 tle = ['1 25544U 98067A   18218.76369510  .00001449  00000-0  29472-4 0  9993' newline '2 25544  51.6423 126.6422 0005481  33.3092  62.9075 15.53806849126382'];
 RequestBody = struct('tle',tle, 'simple_ground_location', groundLocation, 'time_window', timeWindow);
 
