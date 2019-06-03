@@ -1,4 +1,4 @@
-function [result, error] = OkapiGetResult(PicardLogin, request, UrlEndpoint)
+function [result, error] = OkapiGetResult(PicardLogin, request, UrlEndpoint, GenericPrompt)
 % OkapiGetResult() Get results from Picard
 %
 %   Inputs
@@ -7,6 +7,8 @@ function [result, error] = OkapiGetResult(PicardLogin, request, UrlEndpoint)
 %       request - struct array containing the request_id and request_type, needed
 %       to get the results from Picard.
 %       UrlEndpoint - The adress, from which the result is to be retrieved
+%       GenericPrompt - Type 'Generic', to retrieve results in the generic
+%       format. NOTE: Currently only works for NEPTUNE!
 %
 %   Outputs
 %       results - struct array, containing the results from all requests
@@ -35,7 +37,18 @@ end
 if (strcmp(UrlEndpoint(end),'/'))
     UrlEndpoint = UrlEndpoint(1:end-1);   
 end
-url = [PicardLogin.url,UrlEndpoint,'/', num2str(request.request_id)];
+
+if (nargin == 3)
+    url = [PicardLogin.url,UrlEndpoint,'/', num2str(request.request_id)];
+elseif (nargin == 4)
+    if (GenericPrompt == 'generic')
+        url = [PicardLogin.url,UrlEndpoint,'/', num2str(request.request_id),'/', GenericPrompt];
+    else
+        error('Wrong call of OkapiGetResult. Use ''generic'' as GenericPrompt.');
+    end
+else
+    error('Wrong call of OkapiGetResult');
+end
 
 % set up a Matlab http request message
 message = matlab.net.http.RequestMessage;
@@ -76,28 +89,35 @@ error.status = 'NONE';
 % check if struct or cell
 for (i = 1:length(result))
     
-    % check if we have the field stateMsg oder stateMsgs
-    if (isfield(result(i),'state_msg'))
-        if (~strcmp(error.status,'FATAL')) && (~strcmp(result(i).state_msg.type,'NONE'))
-            error.message = result(i).state_msg.text;
-            error.status = result(i).state_msg.type;
-        end
-    elseif (isfield(result(i),'state_msgs'))
-        for (j = 1:length(result(i).state_msgs))
-            if (~strcmp(error.status,'FATAL')) && (~strcmp(result(i).state_msgs(j).type,'NONE'))
-                error.message = result(i).state_msgs(j).text;
-                error.status = result(i).state_msgs(j).type;
-            end
-        end    
-    elseif (isfield(result{i,1},'state_msgs'))
-        for (j = 1:length(result{i,1}.state_msgs))
-            if (~strcmp(error.status,'FATAL')) && (~strcmp(result{i,1}.state_msgs(j).type,'NONE'))
-                error.message = result{i,1}.state_msgs(j).text;
-                error.status = result{i,1}.state_msgs(j).type;
-            end
-        end
+    % check if we have "generic" results
+    if (nargin == 4)
+        error.message = result.okapi_output.status.content.text;
+        error.status = result.okapi_output.status.content.type;   
+    % non generic
     else
-        error('Unexpected error in OkapiGetResult');
+        % check if we have the field stateMsg oder stateMsgs
+        if (isfield(result(i),'state_msg'))
+            if (~strcmp(error.status,'FATAL')) && (~strcmp(result(i).state_msg.type,'NONE'))
+                error.message = result(i).state_msg.text;
+                error.status = result(i).state_msg.type;
+            end
+        elseif (isfield(result(i),'state_msgs'))
+            for (j = 1:length(result(i).state_msgs))
+                if (~strcmp(error.status,'FATAL')) && (~strcmp(result(i).state_msgs(j).type,'NONE'))
+                    error.message = result(i).state_msgs(j).text;
+                    error.status = result(i).state_msgs(j).type;
+                end
+            end    
+        elseif (isfield(result{i,1},'state_msgs'))
+            for (j = 1:length(result{i,1}.state_msgs))
+                if (~strcmp(error.status,'FATAL')) && (~strcmp(result{i,1}.state_msgs(j).type,'NONE'))
+                    error.message = result{i,1}.state_msgs(j).text;
+                    error.status = result{i,1}.state_msgs(j).type;
+                end
+            end
+        else
+            error('Unexpected error in OkapiGetResult');
+        end
     end
 end
 
