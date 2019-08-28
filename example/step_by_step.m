@@ -2,18 +2,18 @@
 clc; close all; clear all;
 %% preparations
 % include path with matlab connector
-addpath ../src/
+%addpath OkapiMatlabConnector/src
+addpath ../src
 
 %% First: Log-in to picard
-[PicardLogin, OkapiError] = OkapiInit(<url_to_server_as_string>,<user_name_as_string>,<password_as_string>);
-if (OkapiError.status == "FATAL")
+[PicardLogin, OkapiError] = OkapiInit('http://okapi.ddns.net:34568/', your_username_as_string, your_password_as_string);
+if (strcmp(OkapiError.status, 'FATAL'))
     % do something about fatal errors
     error(OkapiError.message);
-elseif (OkapiError.status == "WARNING")
+elseif (strcmp(OkapiError.status, 'WARNING'))
     % do something about warnings
     display(OkapiError.message);
 end
-
 %% Second: Set-up your request. Here, we read it from file
 % RequestBody = jsondecode(fileread('pass_prediction_request.json'));
 
@@ -25,11 +25,10 @@ RequestBody = struct('tle',tle, 'simple_ground_location', groundLocation, 'time_
 
 %% Third: Send the request to OKAPI
 [request, OkapiError] = OkapiSendRequest(PicardLogin, RequestBody, 'pass/prediction/requests');
-
-if (OkapiError.status == "FATAL")
+if (strcmp(OkapiError.status, 'FATAL'))
     % do something about fatal errors
     error(OkapiError.message);
-elseif (OkapiError.status == "WARNING")
+elseif (strcmp(OkapiError.status, 'WARNING'))
     % do something about warnings
     display(OkapiError.message);
 end
@@ -37,11 +36,10 @@ end
 %% Fourth get the result (after waiting a short moment)
 pause(2)
 [result, OkapiError] = OkapiGetResult(PicardLogin, request, 'pass/predictions');
-
-if (OkapiError.status == "FATAL")
+if (strcmp(OkapiError.status, 'FATAL'))
     % do something about fatal errors
     error(OkapiError.message);
-elseif (OkapiError.status == "WARNING")
+elseif (strcmp(OkapiError.status, 'WARNING'))
     % do something about warnings
     display(OkapiError.message);
 end

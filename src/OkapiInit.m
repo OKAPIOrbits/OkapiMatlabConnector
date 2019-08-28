@@ -67,7 +67,7 @@ PicardLogin.token = web_response.Body.Data;
 if (strcmp(url(end),'/'))
     PicardLogin.url = url;
 else
-    PicardLogin.url = [url,'/'];
+    PicardLogin.url = [strcat(url, '/')];
 end
 
 PicardLogin.accessTime = now;

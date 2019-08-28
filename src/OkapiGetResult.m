@@ -39,10 +39,10 @@ if (strcmp(UrlEndpoint(end),'/'))
 end
 
 if (nargin == 3)
-    url = [PicardLogin.url,UrlEndpoint,'/', num2str(request.request_id)];
+    url = strcat(PicardLogin.url,UrlEndpoint,'/', num2str(request.request_id));
 elseif (nargin == 4)
     if (GenericPrompt == 'generic')
-        url = [PicardLogin.url,UrlEndpoint,'/', num2str(request.request_id),'/', GenericPrompt];
+        url = strcat(PicardLogin.url,UrlEndpoint,'/', num2str(request.request_id),'/', GenericPrompt);
     else
         error('Wrong call of OkapiGetResult. Use ''generic'' as GenericPrompt.');
     end
@@ -86,15 +86,29 @@ end
 error.message = 'No messages available';
 error.status = 'NONE';
 
-% check if struct or cell
-for (i = 1:length(result))
+% first, check if we are accessing a generic or normal result
+if (nargin == 4)
     
-    % check if we have "generic" results
-    if (nargin == 4)
-        error.message = result.okapi_output.status.content.text;
-        error.status = result.okapi_output.status.content.type;   
-    % non generic
-    else
+    % check, if result was returned at all (sometimes not returned due to
+    % internal errors)
+    if (isfield(result, 'okapi_output'))
+        
+        % check if status is available
+        if (isfield(result.okapi_output, 'status'))
+            error.message = result.okapi_output.status.content.text;
+            error.status = result.okapi_output.status.content.type;
+        else
+            error.message = 'Status of result could not be parsed.';
+            error.status = 'WARNING';
+            disp('I GOT THAT WARNING');
+        end
+    end
+
+% not generic
+else
+    
+    % do the loop
+    for (i = 1:length(result))
         % check if we have the field stateMsg oder stateMsgs
         if (isfield(result(i),'state_msg'))
             if (~strcmp(error.status,'FATAL')) && (~strcmp(result(i).state_msg.type,'NONE'))
@@ -119,6 +133,7 @@ for (i = 1:length(result))
             error('Unexpected error in OkapiGetResult');
         end
     end
+    
 end
 
 error.web_status = web_response.StatusCode;                      

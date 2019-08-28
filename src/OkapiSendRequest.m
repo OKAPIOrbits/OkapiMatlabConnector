@@ -44,7 +44,7 @@ end
 if (strcmp(UrlEndpoint(end),'/'))
     UrlEndpoint = UrlEndpoint(1:end-1);   
 end
-url = [PicardLogin.url,UrlEndpoint];
+url = strcat(PicardLogin.url,UrlEndpoint);
 
 % send the message to the server
 web_response = message.send(url);
