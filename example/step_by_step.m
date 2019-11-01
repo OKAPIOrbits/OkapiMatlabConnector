@@ -6,7 +6,7 @@ clc; close all; clear all;
 addpath ../src
 
 %% First: Log-in to picard
-[PicardLogin, OkapiError] = OkapiInit('http://okapi.ddns.net:34568/', your_username_as_string, your_password_as_string);
+[PicardLogin, OkapiError] = OkapiInit('http://okapi.ddns.net:34569/', your_username_as_string, your_password_as_string);
 if (strcmp(OkapiError.status, 'FATAL'))
     % do something about fatal errors
     error(OkapiError.message);
