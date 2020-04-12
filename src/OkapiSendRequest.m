@@ -26,7 +26,8 @@ request = [];
 message = matlab.net.http.RequestMessage;
 message.Method = 'POST';
 message = addFields(message, 'MediaType', 'application/json');
-message = addFields(message, 'access_token', PicardLogin.token.access_token);
+message = addFields(message, 'access_token', PicardLogin.token.access_token); % Legacy
+message = addFields(message, 'Authorization', strcat('Bearer ', PicardLogin.token.access_token);
 message = addFields(message, 'scope', PicardLogin.token.scope);
 
 % create the body
