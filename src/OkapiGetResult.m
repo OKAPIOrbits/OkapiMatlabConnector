@@ -53,7 +53,8 @@ end
 % set up a Matlab http request message
 message = matlab.net.http.RequestMessage;
 message.Method = 'GET';
-message = addFields(message, 'access_token',PicardLogin.token.access_token);
+message = addFields(message, 'access_token',PicardLogin.token.access_token); % Legacy
+message = addFields(message, 'Authorization', strcat('Bearer ', PicardLogin.token.access_token);
 message = addFields(message, 'scope',PicardLogin.token.scope);
     
 %result.service = request.service;
