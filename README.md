@@ -12,6 +12,9 @@ The connector provides three basic routines:
 - OkapiInit: Retrieve the token from Auth0 to use OKAPI
 - OkapiSendRequest: Send a request to OKAPI
 - OkapiGetResult: Get a result from OKAPI.
+- OkapiWaitAndGetResult: Wait until a result has been processed and 
+                         get the result
+- OkapiSendRequestAndWaitForResult: Send and get request in one step
 
 For more information, visit the documentation page on
 www.okapiorbits.space/documentation
