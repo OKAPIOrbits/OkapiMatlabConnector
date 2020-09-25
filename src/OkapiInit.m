@@ -1,4 +1,4 @@
-function [PicardLogin, error] = OkapiInit(url, username, password)
+function [OkapiLogin, error] = OkapiInit(url, username, password)
 % OkapiInit() Performs the initialization of Picard. By default, all
 % possible scopes are requested.
 %   
@@ -8,7 +8,7 @@ function [PicardLogin, error] = OkapiInit(url, username, password)
 %   password - the password to access Picard
 %
 % Outputs:
-%   PicardLogin - Struct, containing URL, Token, accessTime, options and
+%   OkapiLogin - Struct, containing URL, Token, accessTime, options and
 %   success status. PicardLogin.exit == 0 is success
 %   error - struct containing error states
 
@@ -19,7 +19,7 @@ import matlab.net.http.*;
 error.message = 'No messages available';
 error.status = 'NONE';
 error.web_status = 0;
-PicardLogin = 0;
+OkapiLogin = 0;
 
 % set up the message
 message = matlab.net.http.RequestMessage;
@@ -52,7 +52,7 @@ if (web_response.StatusCode == 404)
     return;
 end
 
-if (web_response.StatusCode == 403)
+if (web_response.StatusCode ~= 200)
     error.web_status = web_response.StatusCode;
     error.message = ['Error in okapi_init: ', web_response.Body.Data.error,': ', web_response.Body.Data.error_description];
     error.status = 'FATAL';
@@ -60,17 +60,17 @@ if (web_response.StatusCode == 403)
 end
 
 % set up the token
-clearvars PicardLogin
-PicardLogin.token = web_response.Body.Data;
+clearvars OkapiLogin
+OkapiLogin.token = web_response.Body.Data;
 
 % ensure that there is a trailing "/" in the url
 if (strcmp(url(end),'/'))
-    PicardLogin.url = url;
+    OkapiLogin.url = url;
 else
-    PicardLogin.url = [strcat(url, '/')];
+    OkapiLogin.url = [strcat(url, '/')];
 end
 
-PicardLogin.accessTime = now;
+OkapiLogin.accessTime = now;
 
 end
 

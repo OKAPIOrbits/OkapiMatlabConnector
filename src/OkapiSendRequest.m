@@ -1,4 +1,4 @@
-function [request, error] = OkapiSendRequest(PicardLogin, ... 
+function [request, error] = OkapiSendRequest(OkapiLogin, ... 
     RequestBody, UrlEndpoint)
 % OkapiSendRequest() Sends requests to Picard
 %
@@ -25,10 +25,14 @@ request = [];
 % set up the message
 message = matlab.net.http.RequestMessage;
 message.Method = 'POST';
+
+genericHeader = matlab.net.http.field.GenericField('Authorization',"Bearer " ...
+    + OkapiLogin.token.access_token); % This bypasses Matlab value validation
+message.Header = genericHeader;
 message = addFields(message, 'MediaType', 'application/json');
-message = addFields(message, 'access_token', PicardLogin.token.access_token); % Legacy
-message = addFields(message, 'Authorization', strcat('Bearer ', PicardLogin.token.access_token);
-message = addFields(message, 'scope', PicardLogin.token.scope);
+message = addFields(message, 'Accept', 'application/json');
+message = addFields(message, 'token_type', OkapiLogin.token.token_type);
+message = addFields(message, 'scope', OkapiLogin.token.scope);
 
 % create the body
 message_body = matlab.net.http.MessageBody;
@@ -45,7 +49,7 @@ end
 if (strcmp(UrlEndpoint(end),'/'))
     UrlEndpoint = UrlEndpoint(1:end-1);   
 end
-url = strcat(PicardLogin.url,UrlEndpoint);
+url = strcat(OkapiLogin.url,UrlEndpoint);
 
 % send the message to the server
 web_response = message.send(url);
@@ -67,8 +71,9 @@ end
 
 % get the errors and the message in case the everything was okay or we got
 % a 500 as result (which indicates a wrong input)
-error.message = strcat("OkapiSendRequest: ", request.state_msg.text);
-error.status = request.state_msg.type;
+
+error.message = strcat("OkapiSendRequest: ", request.status.text);
+error.status = request.status.type;
 error.web_status = web_response.StatusCode;
 
 % check for timeouts?

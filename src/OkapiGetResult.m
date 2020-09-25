@@ -1,18 +1,20 @@
-function [result, error] = OkapiGetResult(PicardLogin, request, UrlEndpoint, GenericPrompt)
+function [result, error] = OkapiGetResult(OkapiLogin, request, UrlEndpoint, ...
+    resultPartId)
 % OkapiGetResult() Get results from Picard
 %
 %   Inputs
-%       PicardLogin - Struct, containing at least URL, options and Token for 
-%       Picard. Can be obtained using OkapiInit().
+%       OkapiLogin - Struct, containing at least URL, options and Token for 
+%       OKAPI:Platform. Can be obtained using OkapiInit().
 %       request - struct array containing the request_id and request_type, needed
 %       to get the results from Picard.
 %       UrlEndpoint - The adress, from which the result is to be retrieved
-%       GenericPrompt - Type 'Generic', to retrieve results in the generic
-%       format. NOTE: Currently only works for NEPTUNE!
+%       resultPartId - Optional. Use for cases when your result is made
+%       of several parts (for example for long propagations)
 %
 %   Outputs
 %       results - struct array, containing the results from all requests
 %       sent.
+%       error - contains the webstatus, error status, and error message
 
 import matlab.net.http.*;
 result = [];
@@ -29,6 +31,11 @@ elseif ( ~isfield(request,'request_id'))
     error.web_status = matlab.net.http.StatusCode(204);    
     return
 end
+
+% check if result_part_id is available
+if ~exist('result_part_id','var')
+    resultPartId = 0;
+end
     
 % set up the url. It should have no leading and no trailing "/"
 if (strcmp(UrlEndpoint(1),'/'))
@@ -38,26 +45,25 @@ if (strcmp(UrlEndpoint(end),'/'))
     UrlEndpoint = UrlEndpoint(1:end-1);   
 end
 
-if (nargin == 3)
-    url = strcat(PicardLogin.url,UrlEndpoint,'/', num2str(request.request_id));
-elseif (nargin == 4)
-    if (GenericPrompt == 'generic')
-        url = strcat(PicardLogin.url,UrlEndpoint,'/', num2str(request.request_id),'/', GenericPrompt);
-    else
-        error('Wrong call of OkapiGetResult. Use ''generic'' as GenericPrompt.');
-    end
+url = strcat(OkapiLogin.url,UrlEndpoint);
+
+% add the correct requestid in the string
+if (resultPartId == 0)
+    url = strrep(url, '{request_id}', request.request_id);
 else
-    error('Wrong call of OkapiGetResult');
+    url = [strrep(url, '{request_id}', request.request_id), '/', num2str(resultPartId)];
 end
 
 % set up a Matlab http request message
 message = matlab.net.http.RequestMessage;
 message.Method = 'GET';
-message = addFields(message, 'access_token',PicardLogin.token.access_token); % Legacy
-message = addFields(message, 'Authorization', strcat('Bearer ', PicardLogin.token.access_token);
-message = addFields(message, 'scope',PicardLogin.token.scope);
-    
-%result.service = request.service;
+genericHeader = matlab.net.http.field.GenericField('Authorization', ...
+    "Bearer " + OkapiLogin.token.access_token); % This bypasses Matlab value validation
+message.Header = genericHeader;
+message = addFields(message, 'MediaType', 'application/json');
+message = addFields(message, 'Accept', 'application/json');
+message = addFields(message, 'token_type', OkapiLogin.token.token_type);
+message = addFields(message, 'scope', OkapiLogin.token.scope);
 
 % send the message
 web_response = message.send(url);        
@@ -70,71 +76,22 @@ if (web_response.StatusCode == 404)
     return;
 end
 
-% get the result as char (needed for conversion to json
-if (~isempty(web_response.Body.Data))
-    result = jsondecode(convertStringsToChars(web_response.Body.Data));
-end
+% get the error messages
+error.message = web_response.Body.Data.status.text;
+error.status = web_response.Body.Data.status.type;
+error.web_status = web_response.StatusCode;
 
 % check for 202
 if (web_response.StatusCode == 202)
-    error.web_status = web_response.StatusCode;
-    error.message = 'Result might not be complete.';
-    error.status = 'WARNING';            
     return;
 end
-    
-% for simplicity, write the values to error
-error.message = 'No messages available';
-error.status = 'NONE';
 
-% first, check if we are accessing a generic or normal result
-if (nargin == 4)
-    
-    % check, if result was returned at all (sometimes not returned due to
-    % internal errors)
-    if (isfield(result, 'okapi_output'))
-        
-        % check if status is available
-        if (isfield(result.okapi_output, 'status'))
-            error.message = result.okapi_output.status.content.text;
-            error.status = result.okapi_output.status.content.type;
-        else
-            error.message = 'Status of result could not be parsed.';
-            error.status = 'WARNING';
-            disp('I GOT THAT WARNING');
-        end
-    end
-
-% not generic
-else
-    
-    % do the loop
-    for (i = 1:length(result))
-        % check if we have the field stateMsg oder stateMsgs
-        if (isfield(result(i),'state_msg'))
-            if (~strcmp(error.status,'FATAL')) && (~strcmp(result(i).state_msg.type,'NONE'))
-                error.message = result(i).state_msg.text;
-                error.status = result(i).state_msg.type;
-            end
-        elseif (isfield(result(i),'state_msgs'))
-            for (j = 1:length(result(i).state_msgs))
-                if (~strcmp(error.status,'FATAL')) && (~strcmp(result(i).state_msgs(j).type,'NONE'))
-                    error.message = result(i).state_msgs(j).text;
-                    error.status = result(i).state_msgs(j).type;
-                end
-            end    
-        elseif (isfield(result{i,1},'state_msgs'))
-            for (j = 1:length(result{i,1}.state_msgs))
-                if (~strcmp(error.status,'FATAL')) && (~strcmp(result{i,1}.state_msgs(j).type,'NONE'))
-                    error.message = result{i,1}.state_msgs(j).text;
-                    error.status = result{i,1}.state_msgs(j).type;
-                end
-            end
-        else
-            error('Unexpected error in OkapiGetResult');
-        end
-    end
-    
+% get the result
+if (~isempty(web_response.Body.Data))
+    result = web_response.Body.Data;
 end
 
-error.web_status = web_response.StatusCode;                      
+if (result.next_result_part_foreseen == 1)
+    error.message = 'There are more parts of the result available.';
+    error.status = 'WARNING';
+end
