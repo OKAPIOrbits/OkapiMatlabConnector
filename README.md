@@ -18,3 +18,5 @@ The connector provides three basic routines:
 
 For more information, visit the documentation page on
 www.okapiorbits.space/documentation
+
+NOTE: This repository is currently not maintained. For a more recent version, please contact sven@okapiorbits.com
